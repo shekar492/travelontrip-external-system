@@ -1,0 +1,13 @@
+http:
+  listner:
+    host: "0.0.0.0"
+    port: "8081"
+    path: "/travelOnTripCall/{serviceType}"
+
+db:
+  mysql:
+    host: "localhost"
+    port: "3306"
+    username: "root"
+    password: "Shekar@492"
+    database: "busservices"

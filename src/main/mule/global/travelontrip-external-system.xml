@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<flow name="travelontrip-external-systemFlow" doc:id="d0fb0b41-c083-42fc-ab79-3b7a3f048074" >
+		<http:listener doc:name="Listener" doc:id="be63e0d3-a8d6-46a6-afac-a9fce57a2fe2" config-ref="HTTP_Listener_config" path="${http.listener.path}">
+			<http:error-response statusCode="#[vars.statusCode]" >
+				<http:body ><![CDATA[#[vars.errormsg default"critical error"]]]></http:body>
+			</http:error-response>
+		</http:listener>
+		<ee:transform doc:name="Transform Message" doc:id="0fd05821-a814-488f-9489-5719ec00f772" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="serviceType" ><![CDATA[%dw 2.0
+output application/json
+---
+attributes.uriParams.serviceType]]></ee:set-variable>
+				<ee:set-variable variableName="transactionId" ><![CDATA[%dw 2.0
+output application/json
+---
+attributes.headers.transactionId]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="a458d4e4-f754-4065-bbad-83bc4628abe5" message="request received for travelontrip implementation #[vars.transactionId]"/>
+		<choice doc:name="Choice" doc:id="f0fab467-58ca-4798-a00c-3170a74d3ea4" >
+			<when expression='#[vars.serviceType =="getRoutes"]'>
+				<logger level="INFO" doc:name="Logger" doc:id="b319ff63-d166-4a4b-8bb8-008abca00bca" message="request received for getroutes flow travelontrip implementation #[vars.transactionId]"/>
+				<flow-ref doc:name="Flow Reference" doc:id="d6cd891c-d56d-4351-97a0-94dd5a684192" name="TravelOnTrip-GetRoutes-ImplementationSub_Flow"/>
+			</when>
+			<when expression='#[vars.serviceType=="getSchedules"]'>
+				<logger level="INFO" doc:name="Logger" doc:id="b03e8f08-ed63-484e-98c9-3ea00c6847b7" message="request received get schedules for travelontrip implementation #[vars.transactionId]" />
+				<flow-ref doc:name="Flow Reference" doc:id="5bab6571-5a06-4701-82dd-df1f3e2fa4b4" name="TravelOnTrip-GetSchedules-ImplementationSub_Flow" />
+			</when>
+			<otherwise>
+				<logger level="INFO" doc:name="Logger" doc:id="35bfc203-eb4c-45e9-b6e9-04cd26c75fb7" message="service type is not matched to the expected."/>
+				<ee:transform doc:name="Transform Message" doc:id="3ec8c551-5891-4bdd-bc15-59aa0fc315e1" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="statuscode" ><![CDATA[%dw 2.0
+output application/json
+---
+500]]></ee:set-variable>
+						<ee:set-variable variableName="errorMsg" ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message":"error in external system"
+}]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</otherwise>
+		</choice>
+		<logger level="INFO" doc:name="Logger" doc:id="ff2d6ced-68f5-4a24-acc0-2a93bb654f4b" message="response received for travelontrip implementation #[vars.transactionId]"/>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="761cd552-571c-4958-a367-2cbbf197395a" >
+				<logger level="INFO" doc:name="Logger" doc:id="adbd4c8a-3b0f-4756-a297-1cbe78e721b8" message="error occured while getting data "/>
+				<ee:transform doc:name="Transform Message" doc:id="498258a8-a99e-4e20-8b77-3e4003aea2cd" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+{
+	"statusCode":"500",
+	"errormessage":vars.errorMsg
+}]]></ee:set-payload>
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="statusCode" ><![CDATA[%dw 2.0
+output application/java
+---
+500]]></ee:set-variable>
+						<ee:set-variable variableName="errorMsg" ><![CDATA[%dw 2.0
+output application/json
+---
+"error occured in external system"]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+</mule>
